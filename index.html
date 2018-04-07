@@ -179,7 +179,7 @@ async function gradientDescent() {
 
     // check convergence
     if (Math.abs(loss - previousLoss) < 0.01) {
-      // break;
+      break;
     }
     previousLoss = loss;
   }
