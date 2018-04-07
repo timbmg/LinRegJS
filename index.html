@@ -81,8 +81,8 @@ const ctxLine = canvasLine.getContext("2d");
 
 const output = document.getElementById('output');
 
-const XY = [];
-var m = 0;
+const XY = {x:[], y:[]};
+var w1 = 0;
 var b = 0;
 
 
@@ -96,12 +96,10 @@ canvasLine.addEventListener('click', function(event) {
   ctxCoord.arc(offsetX, offsetY, 3, 0, 2*Math.PI);
   ctxCoord.fill();
 
-  const pointCords = {
-    x : screenToCartesian(offsetX, offsetY)[0],
-    y : screenToCartesian(offsetX, offsetY)[1]
-  }
+  coords = screenToCartesian(offsetX, offsetY);
+  XY.x.push(coords[0]);
+  XY.y.push(coords[1]);
 
-  XY.push(pointCords);
   resetParameters();
 
 });
@@ -116,59 +114,73 @@ document.addEventListener('keypress', function (e) {
     }
 });
 
-function meanSquaredError() {
-  // calculate the mean squared error of current solution
-  var loss = 0;
-  const N = XY.length;
+
+function forward(x) {
+  // model prediction
+  if (typeof x == 'number') {
+    return w1 * x + b;
+
+  } else if (typeof x == 'object') {
+    var predictions = [];
+    for (var i=0; i<x.length; i++) {
+      predictions.push(forward(x[i]));
+    }
+    return predictions;
+
+  } else {
+    console.log(x);
+    throw "Expected number or object, got " + (typeof x);
+  }
+
+}
+
+function backward(predictions) {
+  // calcualte the gradients of m and b
+  var dw1 = 0;
+  var db = 0;
+  const N = XY.x.length;
 
   for (var i=0; i<N; i++) {
-    loss += (XY[i].y - (m * XY[i].x + b)) ** 2;
+      y_hat = predictions[i];
+      dw1 += -(2/N) * XY.x[i] * (XY.y[i] - y_hat);
+      db += -(2/N) * (XY.y[i] - y_hat);
+  }
+
+  return {w1: dw1, b: db};
+}
+
+function meanSquaredError(predictions) {
+  // calculate the mean squared error of current solution
+  var loss = 0;
+  const N = XY.x.length;
+
+  for (var i=0; i<N; i++) {
+    loss += (XY.y[i] - predictions[i]) ** 2;
   }
   loss = loss / N;
 
   return loss;
 }
 
-function backward() {
-  // calcualte the gradients of m and b
-  var dm = 0;
-  var db = 0;
-  const N = XY.length;
-
-  for (var i=0; i<N; i++) {
-      y_hat = (m * XY[i].x + b)
-      dm += -(2/N) * XY[i].x * (XY[i].y - y_hat);
-      db += -(2/N) * (XY[i].y - y_hat);
-  }
-
-  const gradients = {
-    m: dm,
-    b: db
-  }
-
-  return gradients;
-
-}
-
 function resetParameters() {
-  m = 0;
+  w1 = 0;
   b = 0;
 }
 
 async function gradientDescent() {
 
-  const alpha = 0.00005; // learning rate for m
-  const beta = 0.1; // learning rate for b
+  const alpha = 0.00005; // learning rate for weights
+  const beta = 0.1; // learning rate for bias
 
   var previousLoss = 0;
 
   while (true) {
-
-    loss = meanSquaredError();
-    gradients = backward()
+    predictions = forward(XY.x);
+    loss = meanSquaredError(predictions);
+    gradients = backward(predictions)
 
     // update m and b
-    m = m - alpha * gradients.m;
+    w1 = w1 - alpha * gradients.w1;
     b = b - beta * gradients.b;
 
     console.log(loss);
@@ -190,8 +202,8 @@ async function gradientDescent() {
 
 function updateLine() {
   // draws a line with current parameters m and b
-  var startXY = cartesianToScreen(-250, m * -250 + b);
-  var finalXY = cartesianToScreen(250, m * 250 + b);
+  var startXY = cartesianToScreen(-250, forward(-250));
+  var finalXY = cartesianToScreen(250, forward(250));
 
   ctxLine.strokeStyle = "#C91F37";
   ctxLine.beginPath();
@@ -203,7 +215,7 @@ function updateLine() {
 
 function outputSolution() {
   // outputs solution formula in mathjax
-  output.innerHTML = "$f(x) = " + m.toFixed(3).toString() + " * x + " + b.toFixed(3).toString() + "$";
+  output.innerHTML = "$f(x) = " + w1.toFixed(3).toString() + " * x + " + b.toFixed(3).toString() + "$";
   MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 }
 
