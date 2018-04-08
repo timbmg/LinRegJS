@@ -101,19 +101,9 @@ canvasLine.addEventListener('click', function(event) {
   XY.y.push(coords[1]);
 
   resetParameters();
+  gradientDescent();
 
 });
-
-document.addEventListener('keypress', function (e) {
-    var key = e.which || e.keyCode;
-    if (key === 13) { // 13 is enter
-      console.log(XY);
-      // start algorithm
-      resetParameters();
-      gradientDescent();
-    }
-});
-
 
 function forward(x) {
   // model prediction
@@ -142,9 +132,12 @@ function backward(predictions) {
 
   for (var i=0; i<N; i++) {
       y_hat = predictions[i];
-      dw1 += -(2/N) * XY.x[i] * (XY.y[i] - y_hat);
-      db += -(2/N) * (XY.y[i] - y_hat);
+      dw1 += -2 * XY.x[i] * (XY.y[i] - y_hat);
+      db  += -2           * (XY.y[i] - y_hat);
   }
+
+  dw1 = dw1 / N;
+  db = db / N;
 
   return {w1: dw1, b: db};
 }
@@ -185,7 +178,7 @@ async function gradientDescent() {
 
     console.log(loss);
 
-    updateLine();
+    drawFunction();
 
     await sleep(25);
 
@@ -200,15 +193,15 @@ async function gradientDescent() {
   outputSolution();
 }
 
-function updateLine() {
-  // draws a line with current parameters m and b
-  var startXY = cartesianToScreen(-250, forward(-250));
-  var finalXY = cartesianToScreen(250, forward(250));
+function drawFunction() {
 
   ctxLine.strokeStyle = "#C91F37";
   ctxLine.beginPath();
-  ctxLine.moveTo(startXY[0], startXY[1]);
-  ctxLine.lineTo(finalXY[0], finalXY[1]);
+  for (var x=-250; x<=250; x++) {
+    const coords = cartesianToScreen(x, forward(x));
+    ctxLine.lineTo(coords[0], coords[1]);
+  }
+  ctxLine.lineJoin = 'round';
   ctxLine.clearRect(0, 0, canvasLine.width, canvasLine.height);
   ctxLine.stroke();
 }
