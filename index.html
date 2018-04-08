@@ -85,6 +85,9 @@ const XY = {x:[], y:[]};
 var w1 = 0;
 var b = 0;
 
+var alpha = 0.00001;
+var beta = 0.1;
+
 
 canvasLine.addEventListener('click', function(event) {
   // adds a point to the coordinate canvas where user has clicked
@@ -160,10 +163,11 @@ function resetParameters() {
   b = 0;
 }
 
-async function gradientDescent() {
+function halfLearningRate() {
+  return [alpha/2, beta/2];
+}
 
-  const alpha = 0.00005; // learning rate for weights
-  const beta = 0.1; // learning rate for bias
+async function gradientDescent() {
 
   var previousLoss = 0;
 
@@ -182,8 +186,14 @@ async function gradientDescent() {
 
     await sleep(25);
 
-    // check convergence
-    if (Math.abs(loss - previousLoss) < 0.01) {
+    if (loss > previousLoss) {
+      // check overshooting
+      console.log(loss, alpha, beta)
+      halfLearningRate();
+
+    } else if (Math.abs(loss - previousLoss) < 0.01) {
+      // check convergence
+      console.log(loss, alpha, beta)
       break;
     }
     previousLoss = loss;
